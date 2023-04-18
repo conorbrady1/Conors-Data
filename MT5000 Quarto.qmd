@@ -1,0 +1,113 @@
+---
+title: "Unicef Data Viusalization"
+format: html
+editor: visual
+---
+
+## Introduction
+
+In this project, we focus on the accessibility of HIV testing for pregnant women at antenatal clinics around the world. We aim to raise awareness about the importance of HIV testing during pregnancy to enusre early detection, intervention and ultimately improving maternal and child health.
+
+## Data Visualization
+
+### 1. A World Map Chart
+
+```{r, message=FALSE, warning=FALSE}
+#reading data from csv files
+unicef1 <- read.csv('unicef_indicator_2.csv')
+unicef2 <- read.csv("unicef_indicator_2.csv")
+unicef <- rbind(unicef1, unicef2)
+
+# Load necessary libraries
+library(tidyverse)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Preprocess data for the most recent year available
+latest_data <- unicef %>%
+  filter(time_period == max(time_period))
+
+# Load world map dataset
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Merge world map dataset with the latest_data data frame
+world_data <- world %>%
+  left_join(latest_data, by = c("iso_a3" = "alpha_3_code"))
+
+# Create a world map chart using ggplot2
+ggplot() +
+  geom_sf(data = world_data, aes(fill = obs_value), color = "black", size = 0.1) +
+  scale_fill_viridis_c(option = "viridis", trans = "log10", na.value = "gray90",
+                       labels = scales::comma_format(),
+                       guide = guide_colorbar(title = "Number of Pregnant Women\nTested for HIV")) +
+  labs(title = "Global Number of Pregnant Women Tested for HIV at Antenatal Clinics",
+       subtitle = paste("Year:", max(latest_data$time_period))) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        plot.title = element_text(size = 13, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 12, face = "bold", hjust = 0.5))
+```
+
+### 2. A bar chart
+
+```{r, fig.width=7}
+top10_countries <- latest_data %>%
+  group_by(country) %>%
+  summarise(obs_value = sum(obs_value)) %>%
+  arrange(desc(obs_value)) %>%
+  head(10)
+
+# Create a bar chart using ggplot2
+ggplot(top10_countries, aes(x = reorder(country, obs_value), y = obs_value, fill = country)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  labs(title = "Top 10 Countries with Highest Number of Pregnant Women Tested",
+       x = "Country",
+       y = "Number of Pregnant Women Tested for HIV") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 13, face = "bold", hjust = 0.5),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 12),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  coord_flip()
+```
+
+### 3. A scatterplot with a linear regression line
+
+```{r}
+#scatter plot obs_value and time period
+unicef%>%
+  group_by(time_period)%>%
+  summarise(obs_value = sum(obs_value))%>%
+  ggplot(aes(x = time_period, y = obs_value)) +
+  geom_point(col = "steelblue") +
+  geom_smooth(formula = y ~ x ,method = "lm") +
+  theme_minimal() +
+  labs(title = "Scatter plot for Number of Pregnats women tested Over Time") +
+  theme(
+        plot.title = element_text(size = 13, face = "bold", hjust = 0.5),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 12))
+```
+
+### 4. A time-series chart
+
+```{r}
+unicef%>%
+  group_by(time_period)%>%
+  summarise(obs_value = mean(obs_value))%>%
+  ggplot(aes(x = time_period, y = obs_value)) +
+  geom_line(col = "steelblue") +
+  geom_point(col = "blue") +
+  labs(title = "Number of Pregnant Women Tested Over Time",
+       x = "Year",
+       y = "Number of Pregnant Women Tested for HIV") +
+  theme_minimal() +
+  theme(
+        plot.title = element_text(size = 13, face = "bold", hjust = 0.5),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 12))
+```
+
+### 
